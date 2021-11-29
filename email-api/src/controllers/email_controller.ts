@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { PrismaClient } from ".prisma/client";
 import { connection } from "../config/rabbitmq";
+import { redis } from "../config/redis";
 const prisma = new PrismaClient();
 
 export const emailController = {
@@ -23,11 +24,10 @@ export const emailController = {
         channel.assertQueue("email-queue");
         channel.sendToQueue(
           "email-queue",
-          Buffer.from(
-            JSON.stringify({ fullname, email, welcome: true})
-          )
+          Buffer.from(JSON.stringify({ fullname, email, welcome: true }))
         );
       });
+      await redis.del("email");
       return res.status(200).json({
         success: true,
         message: "Email added successfully",
@@ -40,11 +40,20 @@ export const emailController = {
     }
   },
   getEmail: async (req: Request, res: Response) => {
-    const emails = await prisma.email.findMany();
-    return res.status(200).json({
-      success: true,
-      data: emails,
-    });
+    const data = await redis.get("email");
+    if (!data) {
+      const emails = await prisma.email.findMany();
+      await redis.set("email", JSON.stringify(emails));
+      return res.status(200).json({
+        success: true,
+        data: emails,
+      });
+    } else {
+      return res.status(200).json({
+        success: true,
+        data: JSON.parse(data),
+      });
+    }
   },
   deleteEmail: async (req: Request, res: Response) => {
     const { id } = req.params;
@@ -54,6 +63,7 @@ export const emailController = {
           id: parseInt(id!),
         },
       });
+      await redis.del("email");
       return res.status(200).json({
         success: true,
         message: "Email deleted successfully",

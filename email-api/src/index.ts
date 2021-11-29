@@ -8,6 +8,8 @@ const port = process.env.PORT || 3333;
 
 app.use(cors());
 app.use(express.json());
+app.disable('x-powered-by');
+
 app.use("/email", email);
 
 app.listen(port, () => {
