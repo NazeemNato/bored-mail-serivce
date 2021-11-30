@@ -1,4 +1,4 @@
-# Bored Mail Service
+# Simple Mail Service
 
 simple mail service using express, notifire, rabbitmq and agenda.
 
